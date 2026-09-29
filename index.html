@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Green text card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#20241F; --ink-soft:#5C6058;
+    --bg:#26312B; --font-color:#EDE9DD;
+    --font-word:'Fraunces',serif; --font-style:italic; --font-weight:500;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Space Mono',monospace;background:#F6F4EE;color:var(--ink);padding:32px 16px 64px;}
+  .wrap{max-width:1040px;margin:0 auto;display:grid;grid-template-columns:340px 1fr;gap:40px;}
+  @media (max-width:800px){.wrap{grid-template-columns:1fr;}}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:26px;margin:0 0 4px;}
+  .sub{font-size:12px;color:var(--ink-soft);margin:0 0 20px;}
+  label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin:18px 0 6px;}
+  input,textarea,select{width:100%;font-family:'Space Mono',monospace;font-size:14px;padding:9px 10px;background:#fff;border:1px solid #cfcabb;border-radius:2px;color:var(--ink);}
+  textarea{min-height:160px;resize:vertical;line-height:1.5;}
+  select{appearance:none;cursor:pointer;}
+  .row{display:flex;gap:10px;} .row>div{flex:1;}
+  .color-field{display:flex;gap:6px;align-items:center;}
+  .color-field input[type=color]{width:40px;height:36px;padding:2px;flex-shrink:0;cursor:pointer;}
+  .color-field input[type=text]{flex:1;text-transform:uppercase;}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:2px;background:#cfcabb;padding:0;border:none;margin-top:4px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ink);cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--ink);border:none;cursor:pointer;}
+  button{margin-top:14px;padding:10px 20px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--ink);color:#EDE9DD;border:none;border-radius:2px;cursor:pointer;}
+  button:hover{opacity:.88;} button:disabled{opacity:.4;cursor:not-allowed;}
+  .hint{font-size:11px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;}
+
+  .stage{display:flex;align-items:flex-start;justify-content:center;}
+  .card-scale-wrapper{width:100%;max-width:400px;aspect-ratio:4/5;overflow:hidden;position:relative;border:1px solid var(--ink);}
+  #card{width:1080px;height:1350px;background:var(--bg);position:absolute;top:0;left:0;transform-origin:top left;
+    display:flex;align-items:center;justify-content:center;padding:100px;}
+  #card-text{font-family:var(--font-word);font-style:var(--font-style);font-weight:var(--font-weight);
+    color:var(--font-color);width:100%;text-align:center;line-height:1.15;white-space:pre-wrap;word-break:break-word;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Green text card</h1>
+    <p class="sub">Type text on a green background</p>
+
+    <label for="text-in">Your text</label>
+    <textarea id="text-in" placeholder="Write here...">Write your text here</textarea>
+
+    <label for="font-family">Font family</label>
+    <select id="font-family">
+      <option value="fraunces" selected>Fraunces (default, serif italic)</option>
+      <option value="georgia">Georgia</option>
+      <option value="helvetica">Helvetica</option>
+      <option value="times">Times New Roman</option>
+      <option value="grotesque">Classic Grotesque Pro Semi Bold</option>
+    </select>
+    <p class="hint" id="font-hint" style="display:none;">Classic Grotesque Pro is a licensed font and only renders if it's installed on your device. Otherwise it falls back to a similar sans-serif.</p>
+
+    <div class="row">
+      <div>
+        <label for="font-color">Text color</label>
+        <div class="color-field">
+          <input type="color" id="font-color" value="#EDE9DD">
+          <input type="text" id="font-hex" value="#EDE9DD" maxlength="7">
+        </div>
+      </div>
+      <div>
+        <label for="align">Alignment</label>
+        <select id="align">
+          <option value="center" selected>Center</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+    </div>
+
+    <label for="size">Text size — <span id="size-val">auto</span> <span style="text-transform:none;letter-spacing:0;">(0 = auto-fit)</span></label>
+    <input id="size" type="range" min="0" max="220" value="0" step="2">
+
+    <label for="jpg-quality">JPEG quality — <span id="jpg-quality-val">92</span></label>
+    <input id="jpg-quality" type="range" min="80" max="100" value="92" step="1">
+
+    <div class="btns">
+      <button id="save-photos">Save to Photos</button>
+      <button id="download-jpg">Download JPEG</button>
+    </div>
+    <p class="hint">Exports a 1080×1350px (4:5) JPEG. "Save to Photos" opens the share sheet on iPhone; otherwise it downloads.</p>
+  </div>
+
+  <div class="stage">
+    <div class="card-scale-wrapper" id="stage">
+      <div id="card"><div id="card-text"></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const card = $('card'), textEl = $('card-text'), stage = $('stage');
+  const root = document.documentElement.style;
+
+  const FONTS = {
+    fraunces:  {family:"'Fraunces',serif", style:'italic', weight:'500'},
+    georgia:   {family:"Georgia,'Times New Roman',serif", style:'normal', weight:'600'},
+    helvetica: {family:"Helvetica,Arial,'Helvetica Neue',sans-serif", style:'normal', weight:'600'},
+    times:     {family:"'Times New Roman',Times,serif", style:'normal', weight:'600'},
+    grotesque: {family:"'Classic Grotesque Pro Semi Bold','Classic Grotesque Pro',Helvetica,Arial,sans-serif", style:'normal', weight:'600'}
+  };
+
+  function fit(){
+    const manual = parseInt($('size').value, 10);
+    textEl.style.textAlign = $('align').value;
+    if(manual > 0){ textEl.style.fontSize = manual + 'px'; return; }
+    const maxH = 1350 - 200;
+    let s = 140;
+    textEl.style.fontSize = s + 'px';
+    while(s > 20 && textEl.scrollHeight > maxH){ s -= 4; textEl.style.fontSize = s + 'px'; }
+  }
+
+  function render(){
+    textEl.textContent = $('text-in').value || ' ';
+    fit();
+  }
+
+  function syncFont(){
+    const f = FONTS[$('font-family').value];
+    root.setProperty('--font-word', f.family);
+    root.setProperty('--font-style', f.style);
+    root.setProperty('--font-weight', f.weight);
+    $('font-hint').style.display = $('font-family').value === 'grotesque' ? 'block' : 'none';
+    render();
+  }
+
+  function syncScale(){ card.style.transform = 'scale(' + (stage.clientWidth / 1080) + ')'; }
+
+  $('text-in').addEventListener('input', render);
+  $('font-family').addEventListener('change', syncFont);
+  $('align').addEventListener('change', fit);
+  $('size').addEventListener('input', () => { $('size-val').textContent = $('size').value === '0' ? 'auto' : $('size').value; fit(); });
+  $('jpg-quality').addEventListener('input', () => $('jpg-quality-val').textContent = $('jpg-quality').value);
+  window.addEventListener('resize', syncScale);
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+
+  const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+  $('font-color').addEventListener('input', e => { $('font-hex').value = e.target.value.toUpperCase(); root.setProperty('--font-color', e.target.value); });
+  $('font-hex').addEventListener('input', e => {
+    const v = e.target.value.trim();
+    if(HEX.test(v)){
+      $('font-color').value = v.length === 4 ? '#' + v.slice(1).split('').map(c => c + c).join('') : v;
+      root.setProperty('--font-color', v);
+    }
+  });
+
+  async function capture(){
+    const t = card.style.transform;
+    card.style.transform = 'none';
+    const canvas = await html2canvas(card, {scale:1, backgroundColor:null, width:1080, height:1350});
+    card.style.transform = t;
+    return canvas;
+  }
+  const toBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+  const fileName = () => (($('text-in').value.trim().split('\n')[0] || 'card').replace(/[^a-z0-9\-]+/gi, '_').slice(0, 30) || 'card') + '.jpg';
+
+  function download(blob, name){
+    const a = document.createElement('a');
+    a.download = name; a.href = URL.createObjectURL(blob); a.click();
+  }
+
+  $('save-photos').addEventListener('click', async e => {
+    const btn = e.currentTarget, orig = btn.textContent;
+    btn.textContent = 'Preparing...'; btn.disabled = true;
+    try{
+      const blob = await toBlob(await capture(), $('jpg-quality').value / 100);
+      const name = fileName();
+      const file = new File([blob], name, {type:'image/jpeg'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file]}); }
+        catch(err){ if(!err || err.name !== 'AbortError') download(blob, name); }
+      } else download(blob, name);
+    } finally { btn.textContent = orig; btn.disabled = false; }
+  });
+
+  $('download-jpg').addEventListener('click', async () => {
+    const blob = await toBlob(await capture(), $('jpg-quality').value / 100);
+    download(blob, fileName());
+  });
+
+  syncScale();
+  syncFont();
+</script>
+</body>
+</html>
