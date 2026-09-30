@@ -11,6 +11,7 @@
     --ink:#20241F; --ink-soft:#5C6058;
     --bg:#26312B; --font-color:#EDE9DD;
     --font-word:'Fraunces',serif; --font-style:italic; --font-weight:500;
+    --line-height:1.15;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:'Space Mono',monospace;background:#F6F4EE;color:var(--ink);padding:32px 16px 64px;}
@@ -39,7 +40,7 @@
   #card{width:1080px;height:1350px;background:var(--bg);position:absolute;top:0;left:0;transform-origin:top left;
     display:flex;align-items:center;justify-content:center;padding:100px;}
   #card-text{font-family:var(--font-word);font-style:var(--font-style);font-weight:var(--font-weight);
-    color:var(--font-color);width:100%;text-align:center;line-height:1.15;white-space:pre-wrap;word-break:break-word;}
+    color:var(--font-color);width:100%;text-align:center;line-height:var(--line-height);white-space:pre-wrap;word-break:break-word;}
 </style>
 </head>
 <body>
@@ -81,6 +82,9 @@
 
     <label for="size">Text size — <span id="size-val">auto</span> <span style="text-transform:none;letter-spacing:0;">(0 = auto-fit)</span></label>
     <input id="size" type="range" min="0" max="220" value="0" step="2">
+
+    <label for="line-spacing">Line spacing — <span id="lh-val">1.15</span></label>
+    <input id="line-spacing" type="range" min="0.9" max="2.4" value="1.15" step="0.05">
 
     <label for="jpg-quality">JPEG quality — <span id="jpg-quality-val">92</span></label>
     <input id="jpg-quality" type="range" min="80" max="100" value="92" step="1">
@@ -143,6 +147,12 @@
   $('font-family').addEventListener('change', syncFont);
   $('align').addEventListener('change', fit);
   $('size').addEventListener('input', () => { $('size-val').textContent = $('size').value === '0' ? 'auto' : $('size').value; fit(); });
+  $('line-spacing').addEventListener('input', e => {
+    const v = parseFloat(e.target.value).toFixed(2).replace(/0$/, '');
+    $('lh-val').textContent = v;
+    root.setProperty('--line-height', v);
+    fit();
+  });
   $('jpg-quality').addEventListener('input', () => $('jpg-quality-val').textContent = $('jpg-quality').value);
   window.addEventListener('resize', syncScale);
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(render);
