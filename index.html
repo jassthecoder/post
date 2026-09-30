@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Green text card</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#20241F; --ink-soft:#5C6058;
     --bg:#26312B; --font-color:#EDE9DD;
-    --font-word:'Fraunces',serif; --font-style:italic; --font-weight:500;
+    --font-word:Georgia,'Times New Roman',serif; --font-style:normal; --font-weight:400;
     --line-height:1.15;
   }
   *{box-sizing:border-box;}
@@ -32,6 +32,10 @@
   input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--ink);border:none;cursor:pointer;}
   button{margin-top:14px;padding:10px 20px;font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;background:var(--ink);color:#EDE9DD;border:none;border-radius:2px;cursor:pointer;}
   button:hover{opacity:.88;} button:disabled{opacity:.4;cursor:not-allowed;}
+  .label-row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:18px;}
+  .label-row label{margin:0;}
+  #bold-btn{margin:0;padding:4px 12px;font-family:Georgia,serif;font-size:15px;font-weight:700;letter-spacing:0;text-transform:none;background:#fff;color:var(--ink);border:1px solid #cfcabb;}
+  #bold-btn[aria-pressed=true]{background:var(--ink);color:#EDE9DD;border-color:var(--ink);}
   .hint{font-size:11px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
   .btns{display:flex;gap:10px;flex-wrap:wrap;}
 
@@ -41,6 +45,7 @@
     display:flex;align-items:center;justify-content:center;padding:100px;}
   #card-text{font-family:var(--font-word);font-style:var(--font-style);font-weight:var(--font-weight);
     color:var(--font-color);width:100%;text-align:center;line-height:var(--line-height);white-space:pre-wrap;word-break:break-word;}
+  #card-text b{font-weight:700;}
 </style>
 </head>
 <body>
@@ -49,18 +54,13 @@
     <h1>Green text card</h1>
     <p class="sub">Type text on a green background</p>
 
-    <label for="text-in">Your text</label>
+    <div class="label-row">
+      <label for="text-in">Your text</label>
+      <button type="button" id="bold-btn" title="Bold selected words (Ctrl/Cmd+B)">B</button>
+    </div>
+    <div style="height:6px"></div>
     <textarea id="text-in" placeholder="Write here...">Write your text here</textarea>
-
-    <label for="font-family">Font family</label>
-    <select id="font-family">
-      <option value="fraunces" selected>Fraunces (default, serif italic)</option>
-      <option value="georgia">Georgia</option>
-      <option value="helvetica">Helvetica</option>
-      <option value="times">Times New Roman</option>
-      <option value="grotesque">Classic Grotesque Pro Semi Bold</option>
-    </select>
-    <p class="hint" id="font-hint" style="display:none;">Classic Grotesque Pro is a licensed font and only renders if it's installed on your device. Otherwise it falls back to a similar sans-serif.</p>
+    <p class="hint">Select a few words, then press <b>B</b> to bold them (again to un-bold).</p>
 
     <div class="row">
       <div>
@@ -109,14 +109,6 @@
   const card = $('card'), textEl = $('card-text'), stage = $('stage');
   const root = document.documentElement.style;
 
-  const FONTS = {
-    fraunces:  {family:"'Fraunces',serif", style:'italic', weight:'500'},
-    georgia:   {family:"Georgia,'Times New Roman',serif", style:'normal', weight:'600'},
-    helvetica: {family:"Helvetica,Arial,'Helvetica Neue',sans-serif", style:'normal', weight:'600'},
-    times:     {family:"'Times New Roman',Times,serif", style:'normal', weight:'600'},
-    grotesque: {family:"'Classic Grotesque Pro Semi Bold','Classic Grotesque Pro',Helvetica,Arial,sans-serif", style:'normal', weight:'600'}
-  };
-
   function fit(){
     const manual = parseInt($('size').value, 10);
     textEl.style.textAlign = $('align').value;
@@ -128,23 +120,31 @@
   }
 
   function render(){
-    textEl.textContent = $('text-in').value || ' ';
+    const esc = t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const html = esc($('text-in').value || ' ').replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>');
+    textEl.innerHTML = html;
     fit();
-  }
-
-  function syncFont(){
-    const f = FONTS[$('font-family').value];
-    root.setProperty('--font-word', f.family);
-    root.setProperty('--font-style', f.style);
-    root.setProperty('--font-weight', f.weight);
-    $('font-hint').style.display = $('font-family').value === 'grotesque' ? 'block' : 'none';
-    render();
   }
 
   function syncScale(){ card.style.transform = 'scale(' + (stage.clientWidth / 1080) + ')'; }
 
   $('text-in').addEventListener('input', render);
-  $('font-family').addEventListener('change', syncFont);
+  function toggleBold(){
+    const t = $('text-in'), a = t.selectionStart, b = t.selectionEnd, v = t.value;
+    if(a === b){ t.focus(); return; }
+    let ns, ne;
+    if(v.slice(a-2, a) === '**' && v.slice(b, b+2) === '**'){
+      t.value = v.slice(0, a-2) + v.slice(a, b) + v.slice(b+2); ns = a-2; ne = b-2;
+    } else if(v.slice(a, a+2) === '**' && v.slice(b-2, b) === '**' && b-a >= 4){
+      t.value = v.slice(0, a) + v.slice(a+2, b-2) + v.slice(b); ns = a; ne = b-4;
+    } else {
+      t.value = v.slice(0, a) + '**' + v.slice(a, b) + '**' + v.slice(b); ns = a+2; ne = b+2;
+    }
+    t.focus(); t.setSelectionRange(ns, ne); render();
+  }
+  $('bold-btn').addEventListener('mousedown', e => e.preventDefault());
+  $('bold-btn').addEventListener('click', toggleBold);
+  $('text-in').addEventListener('keydown', e => { if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); toggleBold(); } });
   $('align').addEventListener('change', fit);
   $('size').addEventListener('input', () => { $('size-val').textContent = $('size').value === '0' ? 'auto' : $('size').value; fit(); });
   $('line-spacing').addEventListener('input', e => {
@@ -175,7 +175,7 @@
     return canvas;
   }
   const toBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
-  const fileName = () => (($('text-in').value.trim().split('\n')[0] || 'card').replace(/[^a-z0-9\-]+/gi, '_').slice(0, 30) || 'card') + '.jpg';
+  const fileName = () => (($('text-in').value.replace(/\*\*/g,'').trim().split('\n')[0] || 'card').replace(/[^a-z0-9\-]+/gi, '_').slice(0, 30) || 'card') + '.jpg';
 
   function download(blob, name){
     const a = document.createElement('a');
@@ -202,7 +202,7 @@
   });
 
   syncScale();
-  syncFont();
+  render();
 </script>
 </body>
 </html>
