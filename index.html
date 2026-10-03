@@ -38,6 +38,12 @@
   #bold-btn[aria-pressed=true]{background:var(--ink);color:#EDE9DD;border-color:var(--ink);}
   .hint{font-size:11px;color:var(--ink-soft);margin-top:10px;line-height:1.5;}
   .btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .chk{display:flex;align-items:center;gap:8px;margin:14px 0 0;cursor:pointer;font-size:12px;color:var(--ink);letter-spacing:.04em;text-transform:none;}
+  .chk input{width:18px;height:18px;padding:0;margin:0;accent-color:var(--ink);}
+  #bulk-bar{display:flex;align-items:center;gap:10px;margin-top:10px;}
+  #bulk-bar[hidden]{display:none;}
+  #bulk-bar button{margin:0;padding:6px 14px;}
+  #bulk-count{font-size:12px;flex:1;text-align:center;}
 
   .stage{display:flex;align-items:flex-start;justify-content:center;}
   .card-scale-wrapper{width:100%;max-width:400px;aspect-ratio:4/5;overflow:hidden;position:relative;border:1px solid var(--ink);}
@@ -61,6 +67,14 @@
     <div style="height:6px"></div>
     <textarea id="text-in" placeholder="Write here...">Write your text here</textarea>
     <p class="hint">Select a few words, then press <b>B</b> to bold them (again to un-bold).</p>
+
+    <label class="chk"><input type="checkbox" id="bulk"> Bulk mode (many cards at once)</label>
+    <p class="hint" id="bulk-hint" hidden>Number each card (<b>1.</b> <b>2.</b> …, the number stays on the card) or put <b>---</b> alone on a line between cards. Tap inside a card's text to preview it, or use the arrows.</p>
+    <div id="bulk-bar" hidden>
+      <button type="button" id="prev">&larr;</button>
+      <span id="bulk-count">Card 1 / 1</span>
+      <button type="button" id="next">&rarr;</button>
+    </div>
 
     <div class="row">
       <div>
@@ -93,7 +107,7 @@
       <button id="save-photos">Save to Photos</button>
       <button id="download-jpg">Download JPEG</button>
     </div>
-    <p class="hint">Exports a 1080×1350px (4:5) JPEG. "Save to Photos" opens the share sheet on iPhone; otherwise it downloads.</p>
+    <p class="hint">Exports 1080×1350px (4:5) JPEGs. "Save to Photos" opens the share sheet on iPhone (all cards in one go in bulk mode); otherwise it downloads.</p>
   </div>
 
   <div class="stage">
@@ -106,8 +120,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
   const $ = id => document.getElementById(id);
-  const card = $('card'), textEl = $('card-text'), stage = $('stage');
+  const card = $('card'), textEl = $('card-text'), stage = $('stage'), ta = $('text-in');
   const root = document.documentElement.style;
+  const SEP = /\r?\n[ \t]*---[ \t]*(?:\r?\n|$)/;
+  let idx = 0;
+
+  const NUM = /^[ \t]*\d+[.)](?:[ \t]+|$)/gm;
+  function numStarts(v){ return [...v.matchAll(NUM)].map(m => ({s:m.index, e:m.index + m[0].length})); }
+  function splitCards(v){
+    if(SEP.test(v)) return v.split(SEP);
+    const n = numStarts(v);
+    if(!n.length) return [v];
+    return n.map((m, i) => v.slice(m.s, m.e).trim() + ' ' + v.slice(m.e, i + 1 < n.length ? n[i + 1].s : v.length).trimStart());
+  }
+  const parts = () => $('bulk').checked ? splitCards(ta.value) : [ta.value];
+  const cleanParts = () => parts().map(s => s.trim()).filter(Boolean);
 
   function fit(){
     const manual = parseInt($('size').value, 10);
@@ -119,18 +146,46 @@
     while(s > 20 && textEl.scrollHeight > maxH){ s -= 4; textEl.style.fontSize = s + 'px'; }
   }
 
-  function render(){
-    const esc = t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const html = esc($('text-in').value || ' ').replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>');
-    textEl.innerHTML = html;
+  function setText(t){
+    const esc = x => x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    textEl.innerHTML = esc(t.trim() || ' ').replace(/\*\*([\s\S]+?)\*\*/g, '<b>$1</b>');
     fit();
+  }
+
+  function render(){
+    const p = parts();
+    idx = Math.max(0, Math.min(idx, p.length - 1));
+    $('bulk-count').textContent = 'Card ' + (idx + 1) + ' / ' + p.length;
+    setText(p[idx]);
+  }
+
+  function syncIdx(){
+    if(!$('bulk').checked) return;
+    const v = ta.value, c = ta.selectionStart;
+    if(SEP.test(v)) idx = v.slice(0, c).split(SEP).length - 1;
+    else idx = Math.max(0, numStarts(v).filter(m => m.s <= c).length - 1);
   }
 
   function syncScale(){ card.style.transform = 'scale(' + (stage.clientWidth / 1080) + ')'; }
 
-  $('text-in').addEventListener('input', render);
+  ta.addEventListener('input', () => { syncIdx(); render(); });
+  ['click','keyup'].forEach(ev => ta.addEventListener(ev, () => { const o = idx; syncIdx(); if(o !== idx) render(); }));
+
+  $('bulk').addEventListener('change', () => {
+    const on = $('bulk').checked;
+    $('bulk-bar').hidden = !on; $('bulk-hint').hidden = !on;
+    $('save-photos').textContent = on ? 'Save all to Photos' : 'Save to Photos';
+    $('download-jpg').textContent = on ? 'Download all JPEGs' : 'Download JPEG';
+    if(on && !SEP.test(ta.value) && ta.value.trim() === 'Write your text here'){
+      ta.value = 'Card one\n---\nCard two\n---\nCard three';
+    }
+    idx = 0; render();
+  });
+  $('prev').addEventListener('click', () => { idx--; render(); });
+  $('next').addEventListener('click', () => { idx++; render(); });
+
   function toggleBold(){
-    const t = $('text-in'), a = t.selectionStart, b = t.selectionEnd, v = t.value;
+    const t = ta, a = t.selectionStart, b = t.selectionEnd, v = t.value;
     if(a === b){ t.focus(); return; }
     let ns, ne;
     if(v.slice(a-2, a) === '**' && v.slice(b, b+2) === '**'){
@@ -144,7 +199,7 @@
   }
   $('bold-btn').addEventListener('mousedown', e => e.preventDefault());
   $('bold-btn').addEventListener('click', toggleBold);
-  $('text-in').addEventListener('keydown', e => { if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); toggleBold(); } });
+  ta.addEventListener('keydown', e => { if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b'){ e.preventDefault(); toggleBold(); } });
   $('align').addEventListener('change', fit);
   $('size').addEventListener('input', () => { $('size-val').textContent = $('size').value === '0' ? 'auto' : $('size').value; fit(); });
   $('line-spacing').addEventListener('input', e => {
@@ -175,31 +230,47 @@
     return canvas;
   }
   const toBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
-  const fileName = () => (($('text-in').value.replace(/\*\*/g,'').trim().split('\n')[0] || 'card').replace(/[^a-z0-9\-]+/gi, '_').slice(0, 30) || 'card') + '.jpg';
+  const slug = t => (t.replace(/\*\*/g,'').trim().split('\n')[0] || 'card').replace(/[^a-z0-9\-]+/gi, '_').slice(0, 30) || 'card';
 
-  function download(blob, name){
-    const a = document.createElement('a');
-    a.download = name; a.href = URL.createObjectURL(blob); a.click();
+  // Renders every card in turn and returns an array of JPEG Files.
+  async function makeFiles(onProgress){
+    const list = cleanParts(), files = [], q = $('jpg-quality').value / 100;
+    for(let i = 0; i < list.length; i++){
+      onProgress && onProgress(i + 1, list.length);
+      setText(list[i]);
+      await new Promise(r => requestAnimationFrame(() => r()));
+      const blob = await toBlob(await capture(), q);
+      const name = list.length > 1 ? 'card-' + String(i + 1).padStart(2, '0') + '-' + slug(list[i]) + '.jpg' : slug(list[i]) + '.jpg';
+      files.push(new File([blob], name, {type:'image/jpeg'}));
+    }
+    render();
+    return files;
   }
 
-  $('save-photos').addEventListener('click', async e => {
-    const btn = e.currentTarget, orig = btn.textContent;
-    btn.textContent = 'Preparing...'; btn.disabled = true;
-    try{
-      const blob = await toBlob(await capture(), $('jpg-quality').value / 100);
-      const name = fileName();
-      const file = new File([blob], name, {type:'image/jpeg'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        try{ await navigator.share({files:[file]}); }
-        catch(err){ if(!err || err.name !== 'AbortError') download(blob, name); }
-      } else download(blob, name);
-    } finally { btn.textContent = orig; btn.disabled = false; }
-  });
+  function download(file){
+    const a = document.createElement('a');
+    a.download = file.name; a.href = URL.createObjectURL(file); a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  const downloadAll = async files => { for(const f of files){ download(f); await new Promise(r => setTimeout(r, 350)); } };
 
-  $('download-jpg').addEventListener('click', async () => {
-    const blob = await toBlob(await capture(), $('jpg-quality').value / 100);
-    download(blob, fileName());
-  });
+  async function run(btn, share){
+    const orig = btn.textContent;
+    document.querySelectorAll('.btns button').forEach(b => b.disabled = true);
+    try{
+      const files = await makeFiles((i, n) => { btn.textContent = 'Preparing ' + i + '/' + n + '...'; });
+      if(!files.length) return;
+      if(share && navigator.canShare && navigator.canShare({files})){
+        try{ await navigator.share({files}); }
+        catch(err){ if(!err || err.name !== 'AbortError') await downloadAll(files); }
+      } else await downloadAll(files);
+    } finally {
+      btn.textContent = orig;
+      document.querySelectorAll('.btns button').forEach(b => b.disabled = false);
+    }
+  }
+  $('save-photos').addEventListener('click', e => run(e.currentTarget, true));
+  $('download-jpg').addEventListener('click', e => run(e.currentTarget, false));
 
   syncScale();
   render();
